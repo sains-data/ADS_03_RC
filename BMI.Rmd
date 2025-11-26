@@ -1,0 +1,305 @@
+---
+title: "TUBES 2"
+author: "Naufal Aziz Ferdian, Favian Arkanda, Azzelya Thiarnady"
+date: "2025-11-17"
+output: html_document
+---
+
+## 0. Persiapan Library
+
+```{r}
+library(tidyverse)
+library(car)
+library(ggpubr)
+library(DescTools)
+library(rstatix)
+library(readr)  
+library(dplyr)
+library(stringr)
+library(fuzzyjoin)
+```
+
+## 1. Import Data
+
+```{r}
+df <- read.csv("Dataset Tugas Besar ADS 2025 - Karakteristik Mahasiswa .csv")
+fakultas <- read.csv("dataset_with_fakultas_fix[1].csv", sep = "\t")
+```
+
+## 2 .Data cleaning
+
+colSums(is.na(df))
+
+```{r}
+str(df)
+#str(fakultas)
+#colSums(is.na(df))
+```
+
+### Prodi
+
+```{r}
+
+df$prodi <- tolower(df$Program.Studi)
+df$prodi <- trimws(df$prodi)
+
+df$prodi_clean <- case_when(
+  str_detect(df$prodi, "sains data") ~ "Sains Data",
+  str_detect(df$prodi, "aktuaria") ~ "Sains Aktuaria",
+  str_detect(df$prodi, "atmosfer") ~ "Sains Atmosfer dan Keplanetan",
+  str_detect(df$prodi, "matematika") ~ "Matematika",
+  str_detect(df$prodi, "fisika") ~ "Fisika",
+  str_detect(df$prodi, "biologi") ~ "Biologi",
+  str_detect(df$prodi, "farmasi") ~ "Farmasi",
+  str_detect(df$prodi, "sap") ~ "Sains Atmosfer dan Keplanetan",
+  str_detect(df$prodi, "sains") ~ "Sains",
+  
+  str_detect(df$prodi, "teknik elektro") ~ "Teknik Elektro",
+  str_detect(df$prodi, "telekom") ~ "Teknik Telekomunikasi",
+  str_detect(df$prodi, "informatika") ~ "Teknik Informatika",
+  str_detect(df$prodi, "biomed") ~ "Teknik Biomedis",
+  str_detect(df$prodi, "geofis") ~ "Teknik Geofisika",
+  str_detect(df$prodi, "rekayasa") ~ "Rekayasa Instrumentasi dan Automasi",
+  str_detect(df$prodi, "mesin") ~ "Teknik Mesin",
+  str_detect(df$prodi, "geomatika") ~ "geomatika",
+  str_detect(df$prodi, "indrusti") ~ "Teknik Indrusti",
+  str_detect(df$prodi, "tka") ~ "TKA",
+  str_detect(df$prodi, "energi") ~ "Teknik Sistem Energi",
+  str_detect(df$prodi, "pangan") ~ "Teknik Pangan",
+  str_detect(df$prodi, "teknik kimia") ~ "Teknik Kimia",
+  str_detect(df$prodi, "perkere") ~ "Teknik Pereketapian",
+  str_detect(df$prodi, "geologi") ~ "Teknik geologi",
+  str_detect(df$prodi, "biosistem") ~ "Biosistem",
+  str_detect(df$prodi, "keolahragaan") ~ "Keolahragaan",
+  
+  
+  str_detect(df$prodi, "arsitek") ~ "Arsitektur Lanskap",
+  str_detect(df$prodi, "kehutan") ~ "Rekayasa Kehutanan",
+  str_detect(df$prodi, "keola") ~ "Rekayasa Pengelolaan Hutan",
+  str_detect(df$prodi, "perencanaan") ~ "PWK",
+  str_detect(df$prodi, "pariwisata") ~ "Pariwiwsata",
+  str_detect(df$prodi, "pwk") ~ "PWK",
+  str_detect(df$prodi, "visual") ~ "DKV",
+  str_detect(df$prodi, "sipil") ~ "Teknik Sipil",
+  str_detect(df$prodi, "kelautan") ~ "Teknik Kelautan",
+  str_detect(df$prodi, "arl") ~ "Arsitektur Lanskap",
+  str_detect(df$prodi, "kimia") ~ "Kimia",
+  str_detect(df$prodi, "peren") ~ "PWK",
+  str_detect(df$prodi, "pertamban") ~ "Teknik Pertambangan",
+
+  TRUE ~ "Lainnya"
+)
+
+df$fakultas <- case_when(
+  df$prodi_clean %in% c("Sains Data", "Sains Aktuaria", "Sains Atmosfer dan Keplanetan","Matematika","Kimia", "Fisika","Biologi","Farmasi","Sains") ~ "FS",
+  df$prodi_clean %in% c("Teknik Elektro", "Teknik Telekomunikasi", "Teknik Informatika",
+                        "Teknik Biomedis", "Teknik Geofisika","Rekayasa Instrumentasi dan Automasi","Teknik Mesin","Teknik Indrusti","Teknik Sistem Energi","DKV","Teknik Pangan","Rekayasa Kehutanan","Teknik Kimia","Teknik Pertambangan","Teknik geologi","Biosistem","Keolahragaan") ~ "FTI",
+  df$prodi_clean %in% c("Arsitektur Lanskap", "Rekayasa Pengelolaan Hutan","PWK","Teknk Sipil","Teknik Kelautan","TKA","geomatika","Teknik Pereketapian") ~ "FTIK",
+  TRUE ~ "Lainnya"
+)
+
+```
+
+```{r}
+str(df)
+```
+
+```{r}
+```
+
+### BMI dari berat dan tinggi badan
+
+```{r}
+df$Tinggi.clean <- df$Tinggi.Badan..|>
+  tolower()|>
+  gsub("cm", "", x = _)|>
+  gsub("[a-z]", "", x = _)|>
+  parse_number()
+
+df$Berat.clean <- df$Berat.Badan..|>
+  tolower()|>
+  gsub("kg", "", x = _)|>
+  gsub("[a-z]", "", x = _)|>
+  parse_number()
+
+
+
+df %>% filter(Tinggi.clean < 130  | Tinggi.clean > 210 )
+df$Tinggi.clean[df$Tinggi.clean < 130] <- NA
+
+# Konversi Tinggi ke meter 
+df$Tinggi.m <- df$Tinggi.clean / 100
+
+# Hitung BMI
+df$BMI <- df$Berat.clean / (df$Tinggi.m^2)
+  
+summary(df[, c("Tinggi.Badan..", "Tinggi.clean", "Berat.Badan..", "Berat.clean", "BMI")])
+
+df$BMI_cat <- cut(df$BMI, breaks=c(-Inf,18.5,25,30,Inf),
+                  labels=c("Under","Normal","Over","Obese"))
+```
+
+## 3 .EDA
+
+```{r}
+df_summary <- df %>%
+  group_by(fakultas) %>%
+  summarise(
+    mean_BMI = mean(BMI, na.rm = TRUE),
+    median_BMI = median(BMI, na.rm = TRUE),
+    sd_BMI = sd(BMI, na.rm = TRUE),
+    min_BMI = min(BMI, na.rm = TRUE),
+    max_BMI = max(BMI, na.rm = TRUE),
+    n = n()
+  )
+
+df_summary
+```
+
+```{r}
+ggplot(df, aes(x = fakultas, y = BMI, fill = fakultas)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Sebaran BMI Berdasarkan Fakultas",
+    x = "Fakultas",
+    y = "BMI"
+  ) +
+  scale_y_continuous(limits = c(15,26))
+```
+
+```{r}
+ggplot(df, aes(x = Jenis.Kelamin, y = BMI, fill = fakultas)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Sebaran BMI Berdasarkan Fakultas",
+    x = "Fakultas",
+    y = "BMI"
+  ) +
+  scale_y_continuous(limits = c(15,26))
+```
+
+```{r}
+ 
+ggplot(df, aes(x = Pekerjaan.saat.ini..selain.kuliah., y = BMI, fill = fakultas)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Sebaran BMI Berdasarkan Fakultas",
+    x = "Fakultas",
+    y = "BMI"
+  ) +
+  scale_y_continuous(limits = c(15,26))
+```
+
+```{r}
+ggplot(df, aes(x = Keterlibatan.Organisai, y = BMI, fill = fakultas)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Sebaran BMI Berdasarkan Fakultas",
+    x = "Fakultas",
+    y = "BMI"
+  ) +
+  scale_y_continuous(limits = c(15,26))
+```
+
+```{r}
+ggplot(df, aes(x = Jarak.rumah.dari.kampus.ITERA.., y = BMI, fill = fakultas)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Sebaran BMI Berdasarkan Fakultas",
+    x = "Fakultas",
+    y = "BMI"
+  ) +
+  scale_y_continuous(limits = c(15,26))
+```
+
+```{r}
+ggplot(df, aes(x = Jenis.Tempat.Tinggal.....Tempat.tinggal.saat.ini.., y = BMI, fill = fakultas)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Sebaran BMI Berdasarkan Fakultas",
+    x = "Fakultas",
+    y = "BMI"
+  ) +
+  scale_y_continuous(limits = c(15,26))
+```
+
+```{r}
+ggplot(df, aes(x = BMI, fill = fakultas)) +
+  geom_density(alpha = 0.4) +
+  theme_minimal() +
+  labs(
+    title = "Distribusi BMI per Fakultas",
+    x = "BMI",
+    y = "Density"
+  )
+```
+
+```{r}
+ggplot(df, aes(x = BMI, fill = fakultas)) +
+  geom_density(alpha = 0.4) +
+  facet_wrap(~ Jenis.Kelamin)
+  theme_minimal() +
+  labs(
+    title = "Distribusi BMI per Fakultas",
+    x = "BMI",
+    y = "Density"
+  )
+```
+
+```{r}
+df$kategori_BMI <- cut(
+  df$BMI,
+  breaks = c(-Inf, 18.5, 25, 30, Inf),
+  labels = c("Underweight", "Normal", "Overweight", "Obese")
+)
+
+df_bmi_prop <- df %>%
+  group_by(fakultas, kategori_BMI) %>%
+  summarise(n = n()) %>%
+  mutate(proporsi = n / sum(n))
+```
+
+```{r}
+ggplot(df_bmi_prop, aes(x = fakultas, y = proporsi, fill = kategori_BMI)) +
+  geom_col(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  
+  theme_minimal() +
+  labs(
+    title = "Proporsi Kategori BMI Berdasarkan Fakultas",
+    x = "Fakultas",
+    y = "Proporsi"
+  )
+```
+
+```{r}
+anova_bmi <- aov(BMI ~ fakultas + Jenis.Kelamin + Pekerjaan.saat.ini..selain.kuliah., data = df)
+summary(anova_bmi)
+```
+
+```{r}
+anova_bmi <- aov(BMI ~ fakultas + Jenis.Kelamin + Keterlibatan.Organisai, data = df)
+summary(anova_bmi)
+```
+
+```{r}
+
+anova_bmi <- aov(BMI ~ fakultas + Jenis.Kelamin + Jarak.rumah.dari.kampus.ITERA.., data = df)
+summary(anova_bmi)
+```
+
+```{r}
+anova_bmi <- aov(BMI ~ fakultas + Jenis.Kelamin + Jenis.Tempat.Tinggal.....Tempat.tinggal.saat.ini.., data = df)
+summary(anova_bmi)
+```
+
+```{r}
+anova_bmi <- aov(BMI ~ fakultas + Jenis.Kelamin + Uang.Saku.....yang.diberikan.oleh.orangtua., data = df)
+summary(anova_bmi)
+```
